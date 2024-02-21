@@ -28,5 +28,5 @@ setup(name='moblin_assistant',
       ],
       python_requires='>=3.9',
       entry_points = {
-          'console_scripts': ['moblin_assistant=moblin_assistant:_main']
+          'console_scripts': ['moblin_assistant=moblin_assistant:main']
       })
