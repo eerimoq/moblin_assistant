@@ -209,6 +209,10 @@ def do_set_scene(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true')
+    parser.add_argument('--version',
+                        action='version',
+                        version=__version__,
+                        help='Print version information and exit.')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT)
 
     subparsers = parser.add_subparsers(title='subcommands',
