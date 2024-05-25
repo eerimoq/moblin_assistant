@@ -11,7 +11,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -58,6 +58,8 @@ class Assistant:
                         await self.handle_event(data['data'])
                     elif kind == 'response':
                         await self.handle_response(data)
+                    elif kind == 'preview':
+                        pass
                     else:
                         print('Unknown message', message)
             else:
