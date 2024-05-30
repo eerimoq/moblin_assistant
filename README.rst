@@ -1,11 +1,7 @@
 About
 =====
 
-Mangling of various file formats that conveys binary information
-(Motorola S-Record, Intel HEX, TI-TXT, Verilog VMEM, ELF and binary
-files).
-
-Project homepage: https://github.com/eerimoq/moblin_assistant
+A Moblin assistant in the terminal.
 
 Installation
 ============

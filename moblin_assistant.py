@@ -11,7 +11,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -27,6 +27,7 @@ class Assistant:
         self.password = password
         self.challenge = None
         self.salt = None
+        self.identified = False
         self.streamer = None
         self.request_id = 0
         self.client_completions = {}
@@ -37,6 +38,7 @@ class Assistant:
 
         self.challenge = random_string()
         self.salt = random_string()
+        self.identified = False
         await self.send_to_streamer({
             'hello': {
                 'apiVersion': API_VERSION,
@@ -88,18 +90,25 @@ class Assistant:
             concatenated.encode('utf-8')).digest()).decode('utf-8')
 
     async def handle_identify(self, authentication):
-        if authentication == self.hash_password():
-            await self.send_to_streamer({
-                'identified': {
-                    'result': {
-                        'ok':{}
-                    }
-                }
-            })
+        if self.identified:
+            result = {'alreadyIdentified': {}}
+        elif authentication == self.hash_password():
+            self.identified = True
+            result = {'ok': {}}
         else:
-            print('identify failed')
+            self.identified = False
+            result = {'wrongPassword': {}}
+
+        await self.send_to_streamer({
+            'identified': {
+                'result': result
+            }
+        })
 
     async def handle_event(self, data):
+        if not self.identified:
+            return
+
         for kind, data in data.items():
             if kind == 'log':
                 print(data['entry'])
@@ -107,7 +116,9 @@ class Assistant:
                 print('ignoring event', kind, data)
 
     async def handle_response(self, data):
-        print(data)
+        if not self.identified:
+            return
+
         try:
             request_id = data['id']
             queue = self.client_completions[request_id]
@@ -124,25 +135,28 @@ class Assistant:
                 message = json.loads(message.data)
 
                 if message['type'] == 'request':
-                    request_id = self.next_id()
-                    queue = asyncio.Queue()
-                    self.client_completions[request_id] = queue
-                    await self.send_to_streamer({
-                        'request': {
-                            'id': request_id,
-                            'data': message['data']
-                        }
-                    })
-                    await client.send_str(json.dumps({
-                        'type': 'response',
-                        'data': await queue.get()
-                    }))
+                    await self.handle_client_request(client, message)
                 else:
                     print('Not supported', message)
             else:
                 print('Ignoring', message)
 
         return client
+
+    async def handle_client_request(self, client, message):
+        request_id = self.next_id()
+        queue = asyncio.Queue()
+        self.client_completions[request_id] = queue
+        await self.send_to_streamer({
+            'request': {
+                'id': request_id,
+                'data': message['data']
+            }
+        })
+        await client.send_str(json.dumps({
+            'type': 'response',
+            'data': await queue.get()
+        }))
 
 
 def do_run(args):
