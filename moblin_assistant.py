@@ -11,7 +11,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.4.0'
+__version__ = '0.5.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -222,6 +222,26 @@ def do_set_scene(args):
         })
 
 
+def do_go_live(args):
+    make_client_request(
+        args.port,
+        {
+            'setStream': {
+                'on': True
+            }
+        })
+
+
+def do_end(args):
+    make_client_request(
+        args.port,
+        {
+            'setStream': {
+                'on': False
+            }
+        })
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true')
@@ -249,6 +269,12 @@ def main():
     subparser = subparsers.add_parser('set_scene')
     subparser.add_argument('name')
     subparser.set_defaults(func=do_set_scene)
+
+    subparser = subparsers.add_parser('go_live')
+    subparser.set_defaults(func=do_go_live)
+
+    subparser = subparsers.add_parser('end')
+    subparser.set_defaults(func=do_end)
 
     args = parser.parse_args()
 
