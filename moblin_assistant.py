@@ -4,8 +4,10 @@ import random
 import argparse
 from hashlib import sha256
 from base64 import b64encode
+from base64 import b64decode
 import asyncio
 from aiohttp import web
+from aiohttp import MultipartWriter
 import aiohttp
 from websockets.sync.client import connect
 
@@ -31,6 +33,7 @@ class Assistant:
         self.streamer = None
         self.request_id = 0
         self.client_completions = {}
+        self.preview_queues = []
 
     async def handle_streamer(self, request):
         self.streamer = web.WebSocketResponse()
@@ -61,7 +64,7 @@ class Assistant:
                     elif kind == 'response':
                         await self.handle_response(data)
                     elif kind == 'preview':
-                        pass
+                        await self.handle_preview(data['preview'])
                     else:
                         print('Unknown message', message)
             else:
@@ -126,6 +129,15 @@ class Assistant:
         except Exception:
             pass
 
+    async def handle_preview(self, preview):
+        if not self.identified:
+            return
+
+        preview = b64decode(preview)
+
+        for queue in self.preview_queues:
+            queue.put_nowait(preview)
+
     async def handle_client(self, request):
         client = web.WebSocketResponse()
         await client.prepare(request)
@@ -158,12 +170,65 @@ class Assistant:
             'data': await queue.get()
         }))
 
+    async def handle_preview_mjpeg(self, request):
+        response = web.StreamResponse()
+        response.headers["content-type"] = "multipart/x-mixed-replace;boundary=image-boundary"
+        await response.prepare(request)
+
+        queue = asyncio.Queue()
+        await self.add_preview_reader(queue)
+
+        try:
+            while True:
+                image = await queue.get()
+
+                with MultipartWriter("image/jpeg", boundary="image-boundary") as mpwriter:
+                    mpwriter.append(image, {"content-type": "image/jpeg"})
+
+                    try:
+                        await mpwriter.write(response, close_boundary=False)
+                    except (ConnectionResetError, ConnectionAbortedError):
+                        return web.Response(status=499, text="Client closed the connection")
+
+                await response.write(b"\r\n")
+        finally:
+            await self.remove_preview_reader(queue)
+
+    async def add_preview_reader(self, queue):
+        self.preview_queues.append(queue)
+
+        if len(self.preview_queues) == 1:
+            print('start')
+            await self.send_to_streamer({
+                'request': {
+                    'id': self.next_id(),
+                    'data': {
+                        'startPreview': {}
+                    }
+                }
+            })
+
+    async def remove_preview_reader(self, queue):
+        self.preview_queues.remove(queue)
+
+        if len(self.preview_queues) == 0:
+            print('stop')
+            await self.send_to_streamer({
+                'request': {
+                    'id': self.next_id(),
+                    'data': {
+                        'stopPreview': {}
+                    }
+                }
+            })
+
 
 def do_run(args):
     app = web.Application()
     assistant = Assistant(args.password)
     app.add_routes([web.get('/', assistant.handle_streamer)])
     app.add_routes([web.get('/client', assistant.handle_client)])
+    app.add_routes([web.get('/preview', assistant.handle_preview_mjpeg)])
     web.run_app(app, port=args.port)
 
 
