@@ -308,7 +308,10 @@ def main():
                         action='version',
                         version=__version__,
                         help='Print version information and exit.')
-    parser.add_argument('--port', type=int, default=DEFAULT_PORT)
+    parser.add_argument('--port',
+                        type=int,
+                        default=DEFAULT_PORT,
+                        help=f'HTTP server port (default: %(default)s).')
 
     subparsers = parser.add_subparsers(title='subcommands',
                                        dest='subcommand')
