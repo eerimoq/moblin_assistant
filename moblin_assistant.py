@@ -78,6 +78,14 @@ class Assistant:
 
         await self.streamer.send_str(json.dumps(message))
 
+    async def send_request_to_streamer(self, request_id, data):
+        await self.send_to_streamer({
+            'request': {
+                'id': request_id,
+                'data': data
+            }
+        })
+
     def next_id(self):
         self.request_id += 1
 
@@ -159,12 +167,7 @@ class Assistant:
         request_id = self.next_id()
         queue = asyncio.Queue()
         self.client_completions[request_id] = queue
-        await self.send_to_streamer({
-            'request': {
-                'id': request_id,
-                'data': message['data']
-            }
-        })
+        await self.send_request_to_streamer(request_id, message['data'])
         await client.send_str(json.dumps({
             'type': 'response',
             'data': await queue.get()
@@ -198,27 +201,19 @@ class Assistant:
         self.preview_queues.append(queue)
 
         if len(self.preview_queues) == 1:
-            await self.send_to_streamer({
-                'request': {
-                    'id': self.next_id(),
-                    'data': {
-                        'startPreview': {}
-                    }
-                }
-            })
+            await self.send_request_to_streamer(self.next_id(),
+                                                {
+                                                    'startPreview': {}
+                                                })
 
     async def remove_preview_reader(self, queue):
         self.preview_queues.remove(queue)
 
         if len(self.preview_queues) == 0:
-            await self.send_to_streamer({
-                'request': {
-                    'id': self.next_id(),
-                    'data': {
-                        'stopPreview': {}
-                    }
-                }
-            })
+            await self.send_request_to_streamer(self.next_id(),
+                                                {
+                                                    'stopPreview': {}
+                                                })
 
 
 def do_run(args):

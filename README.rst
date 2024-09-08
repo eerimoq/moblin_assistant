@@ -28,4 +28,4 @@ Terminal 2. Control Moblin streamer.
    $ moblin_assistant end
    $ moblin_assistant set_zoom 2.5
 
-Open http://localhost:2345/preview in Chrome to show the preview.
+Open http://localhost:2345/preview in a web browser to see the preview.
