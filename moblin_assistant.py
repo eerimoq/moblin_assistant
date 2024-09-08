@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -179,9 +179,10 @@ class Assistant:
         await response.prepare(request)
 
         queue = asyncio.Queue()
-        await self.add_preview_reader(queue)
 
         try:
+            await self.add_preview_reader(queue)
+
             while True:
                 image = await queue.get()
 
