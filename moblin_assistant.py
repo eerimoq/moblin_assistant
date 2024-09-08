@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -198,7 +198,6 @@ class Assistant:
         self.preview_queues.append(queue)
 
         if len(self.preview_queues) == 1:
-            print('start')
             await self.send_to_streamer({
                 'request': {
                     'id': self.next_id(),
@@ -212,7 +211,6 @@ class Assistant:
         self.preview_queues.remove(queue)
 
         if len(self.preview_queues) == 0:
-            print('stop')
             await self.send_to_streamer({
                 'request': {
                     'id': self.next_id(),
