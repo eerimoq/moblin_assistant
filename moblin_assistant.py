@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.7.0'
+__version__ = '0.8.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -65,6 +65,8 @@ class Assistant:
                         await self.handle_response(data)
                     elif kind == 'preview':
                         await self.handle_preview(data['preview'])
+                    elif kind == 'ping':
+                        await self.handle_ping()
                     else:
                         print('Unknown message', message)
             else:
@@ -145,6 +147,11 @@ class Assistant:
 
         for queue in self.preview_queues:
             queue.put_nowait(preview)
+
+    async def handle_ping(self):
+        await self.send_to_streamer({
+            'pong': {}
+        })
 
     async def handle_client(self, request):
         client = web.WebSocketResponse()
