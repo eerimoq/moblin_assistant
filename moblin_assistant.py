@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.8.0'
+__version__ = '0.9.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -254,6 +254,16 @@ def get_settings(port):
     return data['data']['getSettings']['data']
 
 
+def get_stream_id(port, name):
+    settings = get_settings(port)
+
+    for stream in settings['streams']:
+        if stream['name'] == name:
+            return stream['id']
+    else:
+        raise Exception(f'Unknown stream {name}')
+
+
 def get_scene_id(port, name):
     settings = get_settings(port)
 
@@ -278,6 +288,16 @@ def do_set_zoom(args):
         })
 
 
+def do_set_stream(args):
+    make_client_request(
+        args.port,
+        {
+            'setStream': {
+                'id': get_stream_id(args.port, args.name)
+            }
+        })
+
+
 def do_set_scene(args):
     make_client_request(
         args.port,
@@ -292,7 +312,7 @@ def do_go_live(args):
     make_client_request(
         args.port,
         {
-            'setStream': {
+            'setLive': {
                 'on': True
             }
         })
@@ -302,7 +322,7 @@ def do_end(args):
     make_client_request(
         args.port,
         {
-            'setStream': {
+            'setLive': {
                 'on': False
             }
         })
@@ -334,6 +354,10 @@ def main():
     subparser = subparsers.add_parser('set_zoom')
     subparser.add_argument('level')
     subparser.set_defaults(func=do_set_zoom)
+
+    subparser = subparsers.add_parser('set_stream')
+    subparser.add_argument('name')
+    subparser.set_defaults(func=do_set_stream)
 
     subparser = subparsers.add_parser('set_scene')
     subparser.add_argument('name')
