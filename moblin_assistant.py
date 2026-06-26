@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.9.0'
+__version__ = '0.10.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -27,7 +27,7 @@ class Assistant:
 
     def __init__(self, password):
         self.password = password
-        self.challenge = None
+        self.challenge = ""
         self.salt = None
         self.identified = False
         self.streamer = None
@@ -71,6 +71,11 @@ class Assistant:
                         print('Unknown message', message)
             else:
                 print('Ignoring', message)
+
+        for client_completion in self.client_completions.values():
+            client_completion.put_nowait(None)
+
+        self.client_completions.clear()
 
         return self.streamer
 
@@ -134,7 +139,7 @@ class Assistant:
 
         try:
             request_id = data['id']
-            queue = self.client_completions[request_id]
+            queue = self.client_completions.pop(request_id)
             await queue.put(data)
         except Exception:
             pass
@@ -170,15 +175,19 @@ class Assistant:
 
         return client
 
-    async def handle_client_request(self, client, message):
+    async def handle_client_request(self, client: web.WebSocketResponse, message):
         request_id = self.next_id()
         queue = asyncio.Queue()
         self.client_completions[request_id] = queue
         await self.send_request_to_streamer(request_id, message['data'])
-        await client.send_str(json.dumps({
-            'type': 'response',
-            'data': await queue.get()
-        }))
+        data = await queue.get()
+        if data is not None:
+            await client.send_str(json.dumps({
+                'type': 'response',
+                'data': data
+            }))
+        else:
+            await client.close()
 
     async def handle_preview_mjpeg(self, request):
         response = web.StreamResponse()
