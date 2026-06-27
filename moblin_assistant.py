@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.11.0'
+__version__ = '0.12.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -287,6 +287,17 @@ def do_get_settings(args):
     print(json.dumps(get_settings(args.port), indent=4))
 
 
+def do_get_status(args):
+    data = make_client_request(
+        args.port,
+        {
+            'getStatus': {
+            }
+        })
+
+    print(json.dumps(data['data']['getStatus'], indent=4))
+
+
 def do_set_zoom(args):
     make_client_request(
         args.port,
@@ -379,6 +390,9 @@ def main():
 
     subparser = subparsers.add_parser('get_settings')
     subparser.set_defaults(func=do_get_settings)
+
+    subparser = subparsers.add_parser('get_status')
+    subparser.set_defaults(func=do_get_status)
 
     subparser = subparsers.add_parser('set_zoom')
     subparser.add_argument('level')
