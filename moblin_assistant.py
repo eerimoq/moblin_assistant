@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.10.0'
+__version__ = '0.11.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -337,6 +337,26 @@ def do_end(args):
         })
 
 
+def do_start_recording(args):
+    make_client_request(
+        args.port,
+        {
+            'setRecord': {
+                'on': True
+            }
+        })
+
+
+def do_stop_recording(args):
+    make_client_request(
+        args.port,
+        {
+            'setRecord': {
+                'on': False
+            }
+        })
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true')
@@ -377,6 +397,12 @@ def main():
 
     subparser = subparsers.add_parser('end')
     subparser.set_defaults(func=do_end)
+
+    subparser = subparsers.add_parser('start_recording')
+    subparser.set_defaults(func=do_start_recording)
+
+    subparser = subparsers.add_parser('stop_recording')
+    subparser.set_defaults(func=do_stop_recording)
 
     args = parser.parse_args()
 
