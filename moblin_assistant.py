@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.12.0'
+__version__ = '0.13.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -163,15 +163,19 @@ class Assistant:
         await client.prepare(request)
 
         async for message in client:
-            if message.type == aiohttp.WSMsgType.TEXT:
-                message = json.loads(message.data)
+            try:
+                if message.type == aiohttp.WSMsgType.TEXT:
+                    message = json.loads(message.data)
 
-                if message['type'] == 'request':
-                    await self.handle_client_request(client, message)
+                    if message['type'] == 'request':
+                        await self.handle_client_request(client, message)
+                    else:
+                        print('Not supported', message)
                 else:
-                    print('Not supported', message)
-            else:
-                print('Ignoring', message)
+                    print('Ignoring', message)
+            except Exception as e:
+                print(e)
+                break
 
         return client
 
@@ -236,9 +240,11 @@ class Assistant:
 def do_run(args):
     app = web.Application()
     assistant = Assistant(args.password)
-    app.add_routes([web.get('/', assistant.handle_streamer)])
-    app.add_routes([web.get('/client', assistant.handle_client)])
-    app.add_routes([web.get('/preview', assistant.handle_preview_mjpeg)])
+    app.add_routes([
+        web.get('/', assistant.handle_streamer),
+        web.get('/client', assistant.handle_client),
+        web.get('/preview', assistant.handle_preview_mjpeg)
+    ])
     web.run_app(app, port=args.port)
 
 
