@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.13.0'
+__version__ = '0.14.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -289,6 +289,16 @@ def get_scene_id(port, name):
         raise Exception(f'Unknown scene {name}')
 
 
+def get_mic_id(port, name):
+    settings = get_settings(port)
+
+    for mic in settings['mics']:
+        if mic['name'] == name:
+            return mic['id']
+    else:
+        raise Exception(f'Unknown mic {name}')
+
+
 def do_get_settings(args):
     print(json.dumps(get_settings(args.port), indent=4))
 
@@ -330,6 +340,16 @@ def do_set_scene(args):
         {
             'setScene': {
                 'id': get_scene_id(args.port, args.name)
+            }
+        })
+
+
+def do_set_talkback_mic(args):
+    make_client_request(
+        args.port,
+        {
+            'setTalkbackMic': {
+                'id': get_mic_id(args.port, args.name)
             }
         })
 
@@ -411,6 +431,10 @@ def main():
     subparser = subparsers.add_parser('set_scene')
     subparser.add_argument('name')
     subparser.set_defaults(func=do_set_scene)
+
+    subparser = subparsers.add_parser('set_talkback_mic')
+    subparser.add_argument('name')
+    subparser.set_defaults(func=do_set_talkback_mic)
 
     subparser = subparsers.add_parser('go_live')
     subparser.set_defaults(func=do_go_live)
