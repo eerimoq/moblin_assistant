@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.14.0'
+__version__ = '0.15.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -36,7 +36,7 @@ class Assistant:
         self.preview_queues = []
 
     async def handle_streamer(self, request):
-        self.streamer = web.WebSocketResponse()
+        self.streamer = web.WebSocketResponse(max_msg_size=0)
         await self.streamer.prepare(request)
 
         self.challenge = random_string()
@@ -159,7 +159,7 @@ class Assistant:
         })
 
     async def handle_client(self, request):
-        client = web.WebSocketResponse()
+        client = web.WebSocketResponse(max_msg_size=0)
         await client.prepare(request)
 
         async for message in client:
@@ -249,7 +249,7 @@ def do_run(args):
 
 
 def make_client_request(port, data):
-    with connect(f'ws://localhost:{port}/client') as server:
+    with connect(f'ws://localhost:{port}/client', max_size=None) as server:
         server.send(json.dumps({
             'type': 'request',
             'data': data
@@ -301,6 +301,19 @@ def get_mic_id(port, name):
 
 def do_get_settings(args):
     print(json.dumps(get_settings(args.port), indent=4))
+
+
+def do_import_settings(args):
+    with open(args.file, 'rb') as fin:
+        data = fin.read()
+
+    make_client_request(
+        args.port,
+        {
+            'importSettings': {
+                'data': b64encode(data).decode('utf-8')
+            }
+        })
 
 
 def do_get_status(args):
@@ -416,6 +429,10 @@ def main():
 
     subparser = subparsers.add_parser('get_settings')
     subparser.set_defaults(func=do_get_settings)
+
+    subparser = subparsers.add_parser('import_settings')
+    subparser.add_argument('file')
+    subparser.set_defaults(func=do_import_settings)
 
     subparser = subparsers.add_parser('get_status')
     subparser.set_defaults(func=do_get_status)
