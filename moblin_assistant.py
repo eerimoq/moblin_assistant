@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.17.0'
+__version__ = '0.18.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -133,10 +133,6 @@ class Assistant:
 
         for queue in self.event_queues:
             queue.put_nowait(data)
-
-        for kind, value in data.items():
-            if kind == 'log':
-                print(value['entry'])
 
     async def handle_response(self, data):
         if not self.identified:
