@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.16.0'
+__version__ = '0.17.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -220,10 +220,7 @@ class Assistant:
             data = await queue.get()
 
             try:
-                await events.send_str(json.dumps({
-                    'type': 'event',
-                    'data': data
-                }))
+                await events.send_str(json.dumps(data))
             except Exception:
                 break
 
@@ -297,10 +294,7 @@ def make_client_request(port, data):
 def do_events(args):
     with connect(f'ws://localhost:{args.port}/events', max_size=None) as server:
         for message in server:
-            message = json.loads(message)
-
-            if message['type'] == 'event':
-                print(json.dumps(message['data']), flush=True)
+            print(message, flush=True)
 
 
 def get_settings(port):
