@@ -13,7 +13,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.15.0'
+__version__ = '0.16.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
@@ -34,6 +34,7 @@ class Assistant:
         self.request_id = 0
         self.client_completions = {}
         self.preview_queues = []
+        self.event_queues = []
 
     async def handle_streamer(self, request):
         self.streamer = web.WebSocketResponse(max_msg_size=0)
@@ -123,15 +124,19 @@ class Assistant:
             }
         })
 
+        if self.identified and self.preview_queues:
+            await self.send_preview_request({'startPreview': {}})
+
     async def handle_event(self, data):
         if not self.identified:
             return
 
-        for kind, data in data.items():
+        for queue in self.event_queues:
+            queue.put_nowait(data)
+
+        for kind, value in data.items():
             if kind == 'log':
-                print(data['entry'])
-            else:
-                print('ignoring event', kind, data)
+                print(value['entry'])
 
     async def handle_response(self, data):
         if not self.identified:
@@ -193,6 +198,35 @@ class Assistant:
         else:
             await client.close()
 
+    async def handle_events(self, request):
+        events = web.WebSocketResponse(max_msg_size=0)
+        await events.prepare(request)
+
+        queue = asyncio.Queue()
+        self.event_queues.append(queue)
+        sender = asyncio.create_task(self.send_events(events, queue))
+
+        try:
+            async for message in events:
+                print('Ignoring', message)
+        finally:
+            sender.cancel()
+            self.event_queues.remove(queue)
+
+        return events
+
+    async def send_events(self, events, queue):
+        while True:
+            data = await queue.get()
+
+            try:
+                await events.send_str(json.dumps({
+                    'type': 'event',
+                    'data': data
+                }))
+            except Exception:
+                break
+
     async def handle_preview_mjpeg(self, request):
         response = web.StreamResponse()
         response.headers["content-type"] = "multipart/x-mixed-replace;boundary=image-boundary"
@@ -211,30 +245,31 @@ class Assistant:
 
                     try:
                         await mpwriter.write(response, close_boundary=False)
+                        await response.write(b"\r\n")
                     except (ConnectionResetError, ConnectionAbortedError):
-                        return web.Response(status=499, text="Client closed the connection")
-
-                await response.write(b"\r\n")
+                        break
         finally:
             await self.remove_preview_reader(queue)
+
+        return response
 
     async def add_preview_reader(self, queue):
         self.preview_queues.append(queue)
 
         if len(self.preview_queues) == 1:
-            await self.send_request_to_streamer(self.next_id(),
-                                                {
-                                                    'startPreview': {}
-                                                })
+            await self.send_preview_request({'startPreview': {}})
 
     async def remove_preview_reader(self, queue):
         self.preview_queues.remove(queue)
 
         if len(self.preview_queues) == 0:
-            await self.send_request_to_streamer(self.next_id(),
-                                                {
-                                                    'stopPreview': {}
-                                                })
+            await self.send_preview_request({'stopPreview': {}})
+
+    async def send_preview_request(self, data):
+        try:
+            await self.send_request_to_streamer(self.next_id(), data)
+        except Exception:
+            pass
 
 
 def do_run(args):
@@ -243,6 +278,7 @@ def do_run(args):
     app.add_routes([
         web.get('/', assistant.handle_streamer),
         web.get('/client', assistant.handle_client),
+        web.get('/events', assistant.handle_events),
         web.get('/preview', assistant.handle_preview_mjpeg)
     ])
     web.run_app(app, port=args.port)
@@ -256,6 +292,15 @@ def make_client_request(port, data):
         }))
 
         return json.loads(server.recv())['data']
+
+
+def do_events(args):
+    with connect(f'ws://localhost:{args.port}/events', max_size=None) as server:
+        for message in server:
+            message = json.loads(message)
+
+            if message['type'] == 'event':
+                print(json.dumps(message['data']), flush=True)
 
 
 def get_settings(port):
@@ -426,6 +471,9 @@ def main():
     subparser = subparsers.add_parser('run')
     subparser.add_argument('--password', required=True)
     subparser.set_defaults(func=do_run)
+
+    subparser = subparsers.add_parser('events')
+    subparser.set_defaults(func=do_events)
 
     subparser = subparsers.add_parser('get_settings')
     subparser.set_defaults(func=do_get_settings)
