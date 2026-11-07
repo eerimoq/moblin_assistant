@@ -21,6 +21,7 @@ __version__ = '0.21.0'
 DEFAULT_PORT = 2345
 DEFAULT_PASSWORD = '1234'
 API_VERSION = '0.1'
+REQUEST_TIMEOUT = 30
 RESULT_ERRORS = {
     'unknownRequest': 'request not supported by this Moblin version, try '
                       'updating it',
@@ -361,14 +362,19 @@ def do_run(args):
 
 
 def make_client_request(port, data):
-    with connect(f'ws://localhost:{port}/client', max_size=None) as server:
+    with connect(f'ws://localhost:{port}/client',
+                 max_size=None,
+                 close_timeout=1) as server:
         server.send(json.dumps({
             'type': 'request',
             'data': data
         }))
 
         try:
-            response = json.loads(server.recv())
+            response = json.loads(server.recv(timeout=REQUEST_TIMEOUT))
+        except TimeoutError:
+            raise Exception('timed out waiting for a response from the '
+                            'streamer')
         except ConnectionClosed:
             raise Exception('the server closed the connection')
 
