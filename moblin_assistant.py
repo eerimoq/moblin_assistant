@@ -14,9 +14,10 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.19.0'
+__version__ = '0.20.0'
 
 DEFAULT_PORT = 2345
+DEFAULT_PASSWORD = '1234'
 API_VERSION = '0.1'
 COLORS = {
     'black': '000000',
@@ -510,7 +511,9 @@ def main():
     subparsers.required = True
 
     subparser = subparsers.add_parser('run')
-    subparser.add_argument('--password', required=True)
+    subparser.add_argument('--password',
+                           default=DEFAULT_PASSWORD,
+                           help='Server password (default: %(default)s).')
     subparser.set_defaults(func=do_run)
 
     subparser = subparsers.add_parser('events')
