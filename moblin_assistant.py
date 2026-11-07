@@ -1,5 +1,6 @@
 import re
 import sys
+import errno
 import json
 import random
 import argparse
@@ -305,7 +306,14 @@ def do_run(args):
         web.get('/events', assistant.handle_events),
         web.get('/preview', assistant.handle_preview_mjpeg)
     ])
-    web.run_app(app, port=args.port)
+
+    try:
+        web.run_app(app, port=args.port)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            raise Exception(f'port {args.port} already in use')
+
+        raise
 
 
 def make_client_request(port, data):
