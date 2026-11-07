@@ -16,7 +16,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.21.0'
+__version__ = '0.22.0'
 
 DEFAULT_PORT = 2345
 DEFAULT_PASSWORD = '1234'
