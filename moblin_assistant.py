@@ -14,7 +14,7 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.20.0'
+__version__ = '0.21.0'
 
 DEFAULT_PORT = 2345
 DEFAULT_PASSWORD = '1234'
@@ -501,7 +501,7 @@ def main():
                         action='version',
                         version=__version__,
                         help='Print version information and exit.')
-    parser.add_argument('--port',
+    parser.add_argument('-p', '--port',
                         type=int,
                         default=DEFAULT_PORT,
                         help=f'HTTP server port (default: %(default)s).')
@@ -511,7 +511,7 @@ def main():
     subparsers.required = True
 
     subparser = subparsers.add_parser('run')
-    subparser.add_argument('--password',
+    subparser.add_argument('-p', '--password',
                            default=DEFAULT_PASSWORD,
                            help='Server password (default: %(default)s).')
     subparser.set_defaults(func=do_run)
@@ -560,12 +560,12 @@ def main():
     subparser = subparsers.add_parser('show_tally')
     subparser.add_argument('message',
                            help='Text to show. Empty for border only.')
-    subparser.add_argument('--background',
+    subparser.add_argument('-b', '--background',
                            type=rgb_color,
                            default='red',
                            help='Border and text background color as name or '
                            'RRGGBB (default: %(default)s).')
-    subparser.add_argument('--foreground',
+    subparser.add_argument('-f', '--foreground',
                            type=rgb_color,
                            default='white',
                            help='Text color as name or RRGGBB '
