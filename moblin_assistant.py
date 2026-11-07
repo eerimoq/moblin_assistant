@@ -559,8 +559,20 @@ def do_hide_tally(args):
         })
 
 
+class HelpFormatter(argparse.HelpFormatter):
+
+    def _format_action(self, action):
+        parts = super()._format_action(action)
+
+        # Do not show the subcommand metavar above the list of subcommands.
+        if action.nargs == argparse.PARSER:
+            parts = parts.split('\n', 1)[1]
+
+        return parts
+
+
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=HelpFormatter)
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('--version',
                         action='version',
@@ -572,57 +584,85 @@ def main():
                         help=f'HTTP server port (default: %(default)s).')
 
     subparsers = parser.add_subparsers(title='subcommands',
-                                       dest='subcommand')
-    subparsers.required = True
+                                       dest='subcommand',
+                                       metavar='subcommand')
 
-    subparser = subparsers.add_parser('run')
+    subparser = subparsers.add_parser(
+        'run',
+        help='Start the server that a Moblin streamer connects to.')
     subparser.add_argument('-p', '--password',
                            default=DEFAULT_PASSWORD,
                            help='Server password (default: %(default)s).')
     subparser.set_defaults(func=do_run)
 
-    subparser = subparsers.add_parser('events')
+    subparser = subparsers.add_parser(
+        'events',
+        help='Print events from the streamer until interrupted.')
     subparser.set_defaults(func=do_events)
 
-    subparser = subparsers.add_parser('get_settings')
+    subparser = subparsers.add_parser(
+        'get_settings',
+        help='Print the streamer settings.')
     subparser.set_defaults(func=do_get_settings)
 
-    subparser = subparsers.add_parser('import_settings')
+    subparser = subparsers.add_parser(
+        'import_settings',
+        help='Import settings from given file.')
     subparser.add_argument('file')
     subparser.set_defaults(func=do_import_settings)
 
-    subparser = subparsers.add_parser('get_status')
+    subparser = subparsers.add_parser(
+        'get_status',
+        help='Print the streamer status.')
     subparser.set_defaults(func=do_get_status)
 
-    subparser = subparsers.add_parser('set_zoom')
+    subparser = subparsers.add_parser(
+        'set_zoom',
+        help='Set the zoom level.')
     subparser.add_argument('level', type=float)
     subparser.set_defaults(func=do_set_zoom)
 
-    subparser = subparsers.add_parser('set_stream')
+    subparser = subparsers.add_parser(
+        'set_stream',
+        help='Select the stream with given name.')
     subparser.add_argument('name')
     subparser.set_defaults(func=do_set_stream)
 
-    subparser = subparsers.add_parser('set_scene')
+    subparser = subparsers.add_parser(
+        'set_scene',
+        help='Select the scene with given name.')
     subparser.add_argument('name')
     subparser.set_defaults(func=do_set_scene)
 
-    subparser = subparsers.add_parser('set_talkback_mic')
+    subparser = subparsers.add_parser(
+        'set_talkback_mic',
+        help='Select the talkback mic with given name.')
     subparser.add_argument('name')
     subparser.set_defaults(func=do_set_talkback_mic)
 
-    subparser = subparsers.add_parser('go_live')
+    subparser = subparsers.add_parser(
+        'go_live',
+        help='Start streaming.')
     subparser.set_defaults(func=do_go_live)
 
-    subparser = subparsers.add_parser('end')
+    subparser = subparsers.add_parser(
+        'end',
+        help='Stop streaming.')
     subparser.set_defaults(func=do_end)
 
-    subparser = subparsers.add_parser('start_recording')
+    subparser = subparsers.add_parser(
+        'start_recording',
+        help='Start recording.')
     subparser.set_defaults(func=do_start_recording)
 
-    subparser = subparsers.add_parser('stop_recording')
+    subparser = subparsers.add_parser(
+        'stop_recording',
+        help='Stop recording.')
     subparser.set_defaults(func=do_stop_recording)
 
-    subparser = subparsers.add_parser('show_tally')
+    subparser = subparsers.add_parser(
+        'show_tally',
+        help='Show a tally.')
     subparser.add_argument('message',
                            help='Text to show. Empty for border only.')
     subparser.add_argument('-b', '--background',
@@ -637,10 +677,16 @@ def main():
                            '(default: %(default)s).')
     subparser.set_defaults(func=do_show_tally)
 
-    subparser = subparsers.add_parser('hide_tally')
+    subparser = subparsers.add_parser(
+        'hide_tally',
+        help='Hide the tally.')
     subparser.set_defaults(func=do_hide_tally)
 
     args = parser.parse_args()
+
+    if args.subcommand is None:
+        parser.print_help(sys.stderr)
+        sys.exit(2)
 
     if args.debug:
         args.func(args)
