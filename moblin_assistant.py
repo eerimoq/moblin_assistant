@@ -582,6 +582,9 @@ def main():
     else:
         try:
             args.func(args)
+        except ConnectionRefusedError:
+            sys.exit(f'error: no server listening on port {args.port}, start '
+                     f"it with 'moblin_assistant --port {args.port} run'")
         except BaseException as e:
             sys.exit('error: ' + str(e))
 
