@@ -11,6 +11,7 @@ import asyncio
 from aiohttp import web
 from aiohttp import MultipartWriter
 import aiohttp
+from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect
 
 
@@ -62,6 +63,7 @@ class Assistant:
         self.challenge = ""
         self.salt = None
         self.identified = False
+        self.wrong_password = False
         self.streamer = None
         self.request_id = 0
         self.client_completions = {}
@@ -69,9 +71,10 @@ class Assistant:
         self.event_queues = []
 
     async def handle_streamer(self, request):
-        self.streamer = web.WebSocketResponse(max_msg_size=0)
-        await self.streamer.prepare(request)
+        streamer = web.WebSocketResponse(max_msg_size=0)
+        await streamer.prepare(request)
 
+        self.streamer = streamer
         self.challenge = random_string()
         self.salt = random_string()
         self.identified = False
@@ -85,7 +88,7 @@ class Assistant:
             }
         })
 
-        async for message in self.streamer:
+        async for message in streamer:
             if message.type == aiohttp.WSMsgType.TEXT:
                 message = json.loads(message.data)
 
@@ -105,12 +108,16 @@ class Assistant:
             else:
                 print('Ignoring', message)
 
+        if self.streamer is streamer:
+            self.streamer = None
+            self.identified = False
+
         for client_completion in self.client_completions.values():
             client_completion.put_nowait(None)
 
         self.client_completions.clear()
 
-        return self.streamer
+        return streamer
 
     async def send_to_streamer(self, message):
         if self.streamer is None:
@@ -145,9 +152,10 @@ class Assistant:
             result = {'alreadyIdentified': {}}
         elif authentication == self.hash_password():
             self.identified = True
+            self.wrong_password = False
             result = {'ok': {}}
         else:
-            self.identified = False
+            self.wrong_password = True
             result = {'wrongPassword': {}}
 
         await self.send_to_streamer({
@@ -156,7 +164,10 @@ class Assistant:
             }
         })
 
-        if self.identified and self.preview_queues:
+        if self.wrong_password:
+            print('Streamer sent wrong password')
+            await self.streamer.close()
+        elif self.identified and self.preview_queues:
             await self.send_preview_request({'startPreview': {}})
 
     async def handle_event(self, data):
@@ -212,19 +223,44 @@ class Assistant:
 
         return client
 
+    async def send_error_to_client(self, client, message):
+        await client.send_str(json.dumps({
+            'type': 'error',
+            'message': message
+        }))
+
     async def handle_client_request(self, client: web.WebSocketResponse, message):
+        if not self.identified:
+            if self.wrong_password:
+                error = 'the streamer tried to connect with the wrong password'
+            else:
+                error = 'no streamer connected to the server'
+
+            await self.send_error_to_client(client, error)
+
+            return
+
         request_id = self.next_id()
         queue = asyncio.Queue()
         self.client_completions[request_id] = queue
-        await self.send_request_to_streamer(request_id, message['data'])
+
+        try:
+            await self.send_request_to_streamer(request_id, message['data'])
+        except ConnectionError:
+            del self.client_completions[request_id]
+            queue.put_nowait(None)
+
         data = await queue.get()
+
         if data is not None:
             await client.send_str(json.dumps({
                 'type': 'response',
                 'data': data
             }))
         else:
-            await client.close()
+            await self.send_error_to_client(
+                client,
+                'the streamer disconnected before responding')
 
     async def handle_events(self, request):
         events = web.WebSocketResponse(max_msg_size=0)
@@ -291,6 +327,9 @@ class Assistant:
             await self.send_preview_request({'stopPreview': {}})
 
     async def send_preview_request(self, data):
+        if not self.identified:
+            return
+
         try:
             await self.send_request_to_streamer(self.next_id(), data)
         except Exception:
@@ -323,7 +362,15 @@ def make_client_request(port, data):
             'data': data
         }))
 
-        return json.loads(server.recv())['data']
+        try:
+            response = json.loads(server.recv())
+        except ConnectionClosed:
+            raise Exception('the server closed the connection')
+
+    if response['type'] == 'error':
+        raise Exception(response['message'])
+
+    return response['data']
 
 
 def do_events(args):
