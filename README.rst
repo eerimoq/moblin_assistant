@@ -28,6 +28,19 @@ Terminal 2. Control Moblin streamer.
    $ moblin_assistant end
    $ moblin_assistant set_zoom 2.5
 
+Show a tally on the Moblin streamer. Colors are given as ``RRGGBB`` or
+by name (black, blue, cyan, gray, green, magenta, navy, orange, purple,
+red, white or yellow) and default to white text on red. Use an empty
+message to only show the border.
+
+.. code-block:: text
+
+   $ moblin_assistant show_tally "ON AIR"
+   $ moblin_assistant show_tally PREVIEW --background navy --foreground yellow
+   $ moblin_assistant show_tally LIVE --background 8b0000
+   $ moblin_assistant show_tally "" --background yellow
+   $ moblin_assistant hide_tally
+
 Print events from the Moblin streamer, one JSON object per line, until
 interrupted.
 

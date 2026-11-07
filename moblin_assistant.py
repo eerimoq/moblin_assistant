@@ -1,3 +1,4 @@
+import re
 import sys
 import json
 import random
@@ -13,14 +14,43 @@ from websockets.sync.client import connect
 
 
 __author__ = 'Erik Moqvist'
-__version__ = '0.18.0'
+__version__ = '0.19.0'
 
 DEFAULT_PORT = 2345
 API_VERSION = '0.1'
+COLORS = {
+    'black': '000000',
+    'blue': '0000ff',
+    'cyan': '00ffff',
+    'gray': '808080',
+    'green': '008000',
+    'magenta': 'ff00ff',
+    'navy': '000080',
+    'orange': 'ffa500',
+    'purple': '800080',
+    'red': 'ff0000',
+    'white': 'ffffff',
+    'yellow': 'ffff00'
+}
 
 
 def random_string():
     return random.randbytes(64).hex()
+
+
+def rgb_color(value):
+    color = COLORS.get(value.lower(), value)
+    match = re.fullmatch(r'#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})',
+                         color)
+
+    if match is None:
+        raise argparse.ArgumentTypeError(
+            f"invalid color '{value}', expected RRGGBB or one of "
+            f"{', '.join(COLORS)}")
+
+    red, green, blue = [int(component, 16) for component in match.groups()]
+
+    return {'red': red, 'green': green, 'blue': blue}
 
 
 class Assistant:
@@ -442,6 +472,27 @@ def do_stop_recording(args):
         })
 
 
+def do_show_tally(args):
+    make_client_request(
+        args.port,
+        {
+            'showTally': {
+                'message': args.message,
+                'background': args.background,
+                'foreground': args.foreground
+            }
+        })
+
+
+def do_hide_tally(args):
+    make_client_request(
+        args.port,
+        {
+            'hideTally': {
+            }
+        })
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true')
@@ -502,6 +553,24 @@ def main():
 
     subparser = subparsers.add_parser('stop_recording')
     subparser.set_defaults(func=do_stop_recording)
+
+    subparser = subparsers.add_parser('show_tally')
+    subparser.add_argument('message',
+                           help='Text to show. Empty for border only.')
+    subparser.add_argument('--background',
+                           type=rgb_color,
+                           default='red',
+                           help='Border and text background color as name or '
+                           'RRGGBB (default: %(default)s).')
+    subparser.add_argument('--foreground',
+                           type=rgb_color,
+                           default='white',
+                           help='Text color as name or RRGGBB '
+                           '(default: %(default)s).')
+    subparser.set_defaults(func=do_show_tally)
+
+    subparser = subparsers.add_parser('hide_tally')
+    subparser.set_defaults(func=do_hide_tally)
 
     args = parser.parse_args()
 
