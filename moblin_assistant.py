@@ -21,6 +21,11 @@ __version__ = '0.21.0'
 DEFAULT_PORT = 2345
 DEFAULT_PASSWORD = '1234'
 API_VERSION = '0.1'
+RESULT_ERRORS = {
+    'unknownRequest': 'request not supported by this Moblin version, try '
+                      'updating it',
+    'error': 'Moblin failed to perform the request'
+}
 COLORS = {
     'black': '000000',
     'blue': '0000ff',
@@ -370,7 +375,14 @@ def make_client_request(port, data):
     if response['type'] == 'error':
         raise Exception(response['message'])
 
-    return response['data']
+    data = response['data']
+    result = next(iter(data['result']))
+
+    if result != 'ok':
+        raise Exception(RESULT_ERRORS.get(result,
+                                          f'request failed with {result}'))
+
+    return data
 
 
 def do_events(args):
