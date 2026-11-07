@@ -650,8 +650,9 @@ def main():
         except KeyboardInterrupt:
             sys.exit(130)
         except ConnectionRefusedError:
+            port = '' if args.port == DEFAULT_PORT else f'--port {args.port} '
             sys.exit(f'error: no server listening on port {args.port}, start '
-                     f"it with 'moblin_assistant --port {args.port} run'")
+                     f"it with 'moblin_assistant {port}run'")
         except BaseException as e:
             sys.exit('error: ' + str(e))
 
