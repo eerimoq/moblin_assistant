@@ -582,6 +582,8 @@ def main():
     else:
         try:
             args.func(args)
+        except KeyboardInterrupt:
+            sys.exit(130)
         except ConnectionRefusedError:
             sys.exit(f'error: no server listening on port {args.port}, start '
                      f"it with 'moblin_assistant --port {args.port} run'")
