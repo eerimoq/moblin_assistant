@@ -398,7 +398,7 @@ def do_set_zoom(args):
         args.port,
         {
             'setZoom': {
-                'x': float(args.level)
+                'x': args.level
             }
         })
 
@@ -530,7 +530,7 @@ def main():
     subparser.set_defaults(func=do_get_status)
 
     subparser = subparsers.add_parser('set_zoom')
-    subparser.add_argument('level')
+    subparser.add_argument('level', type=float)
     subparser.set_defaults(func=do_set_zoom)
 
     subparser = subparsers.add_parser('set_stream')
