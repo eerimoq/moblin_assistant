@@ -343,34 +343,26 @@ def get_settings(port):
     return data['data']['getSettings']['data']
 
 
-def get_stream_id(port, name):
-    settings = get_settings(port)
+def find_id(items, kind, name):
+    for item in items:
+        if item['name'] == name:
+            return item['id']
 
-    for stream in settings['streams']:
-        if stream['name'] == name:
-            return stream['id']
-    else:
-        raise Exception(f'Unknown stream {name}')
+    names = ', '.join(item['name'] for item in items)
+
+    raise Exception(f"unknown {kind} '{name}', expected one of {names}")
+
+
+def get_stream_id(port, name):
+    return find_id(get_settings(port)['streams'], 'stream', name)
 
 
 def get_scene_id(port, name):
-    settings = get_settings(port)
-
-    for scene in settings['scenes']:
-        if scene['name'] == name:
-            return scene['id']
-    else:
-        raise Exception(f'Unknown scene {name}')
+    return find_id(get_settings(port)['scenes'], 'scene', name)
 
 
 def get_mic_id(port, name):
-    settings = get_settings(port)
-
-    for mic in settings['mics']:
-        if mic['name'] == name:
-            return mic['id']
-    else:
-        raise Exception(f'Unknown mic {name}')
+    return find_id(get_settings(port)['mics'], 'mic', name)
 
 
 def do_get_settings(args):
